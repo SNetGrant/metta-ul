@@ -16,7 +16,9 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
     "hyperon>=0.2.2",
-    "scikit-learn"
+    "scikit-learn",
+    "pandas",
+    "seaborn",
 ]
 
 [project.optional-dependencies]
