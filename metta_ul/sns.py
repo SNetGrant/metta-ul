@@ -14,7 +14,7 @@ from hyperon.atoms import (
 from hyperon.ext import register_atoms
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pdm import unwrap_args
+from .pdm import unwrap_args
 
 
 class PlotValue(MatchableObject):
@@ -68,7 +68,8 @@ class PatternOperation(OperationObject):
         if self.rec:
             PlotValue = PlotValue[0].get_children()
             PlotValue = [
-                self.execute(arg)[0] if isinstance(arg, ExpressionAtom) else arg
+                self.execute(arg)[0] if isinstance(
+                    arg, ExpressionAtom) else arg
                 for arg in PlotValue
             ]
         # If there is a variable or PatternValue in arguments, create PatternValue
@@ -101,10 +102,11 @@ def wrapnpop(func):
 
 
 @register_atoms
-def slk_atoms():
+def sns_atoms():
 
     snsScatterplot = G(
-        PatternOperation("sns.scatterplot", wrapnpop(sns.scatterplot), unwrap=False)
+        PatternOperation("sns.scatterplot", wrapnpop(
+            sns.scatterplot), unwrap=False)
     )
 
     return {

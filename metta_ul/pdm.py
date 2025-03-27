@@ -12,7 +12,7 @@ from hyperon.atoms import (
 )
 from hyperon.ext import register_atoms
 
-from numme import _np_atom_type, NumpyValue
+from .numme import _np_atom_type, NumpyValue
 import pandas as pd
 
 
@@ -70,7 +70,8 @@ class PatternOperation(OperationObject):
         if self.rec:
             args = args[0].get_children()
             args = [
-                self.execute(arg)[0] if isinstance(arg, ExpressionAtom) else arg
+                self.execute(arg)[0] if isinstance(
+                    arg, ExpressionAtom) else arg
                 for arg in args
             ]
         # If there is a variable or PatternValue in arguments, create PatternValue
@@ -112,7 +113,8 @@ def unwrap_args(atoms):
                 except:
                     raise RuntimeError(f"Incorrect kwarg format {kwarg}")
                 try:
-                    kwargs[get_string_value(kwarg[0])] = kwarg[1].get_object().content
+                    kwargs[get_string_value(
+                        kwarg[0])] = kwarg[1].get_object().content
                 except:
                     raise NoReduceError()
                 continue

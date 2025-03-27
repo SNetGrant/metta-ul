@@ -1,5 +1,4 @@
-! (import! &self metta_ul:pdm)
-! (import! &self metta_ul:skl)
+! (import! &self metta_ul)
 
 ! (bind! &df (pdm.read_csv "tests/housing.csv" (usecols (py-list ("longitude" "latitude")))))
 

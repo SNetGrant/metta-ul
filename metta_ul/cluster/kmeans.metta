@@ -63,3 +63,15 @@
     (kmeans $X $k $max-iter)
     (kmeans.recursion $X (np.choose $X $k) $k $max-iter)
 )
+
+(=
+  (kmeans.fit $X $k)
+  (let* (($centers (kmeans $X $k)) ($lables (np.argmax (kmeans.assign $X $centers $k) 0))) (KmeansModel $X $centers $lables))
+)
+
+(=
+  (labels (KmeansModel $A $B $C))
+  $C
+)
+
+

@@ -2,12 +2,12 @@ from hyperon.atoms import G
 from hyperon.ext import register_atoms
 
 from sklearn.preprocessing import normalize
-from numme import PatternOperation
-from numme import wrapnpop
+from .numme import PatternOperation
+from .numme import wrapnpop
 
 
 @register_atoms
-def slk_atoms():
+def skl_atoms():
 
     skl_normalize = G(
         PatternOperation(
