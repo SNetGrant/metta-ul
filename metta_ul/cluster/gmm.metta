@@ -176,3 +176,6 @@
     (gmm $X $k)
     (gmm $X $k 100)
 )
+
+
+(= (gmm.predict $x ($w  $m $S)) (np.argmax (gmm.e-step $x $w $m $S) 1) )
