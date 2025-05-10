@@ -1,5 +1,10 @@
-! (import! &self metta_ul)
-! (import! &self metta_ul:cluster:gmm)
+ ! (import! &self metta_ul)
+! (import! &self metta_ul:cluster:kmeans)
+! (import! &self metta_ul:helper)
+! (ul-from pandas import DataFrame)
+
+
+! (assertEqual (kv-values ((k1 1) (k2 2))) (1 2))
 
 ! (ul-import pandas as pd)
 
@@ -7,16 +12,21 @@
 
 ! (import.df &df House)
 
-! (bind! &asd (match &self (House $id $expr) $id))
-! (assertEqual (get-type &asd) Number)
+;! (match &self (House 0 $expr) (assertEqual (get-type $expr) ((longitude Number) (latitude Number))))
 
-!(bind! &data (np.array (collapse (match &self (House $id ((longitude $x) (latitude $y))) ($id $x $y)))))
-! (bind! &model (gmm (np.slice &data [:,1:]) 3))
-! (bind! &labels (gmm.predict (np.slice &data [:,1:]) &model))
-! (cons-labels &data &labels ClusterLabel)
+;! (assertEqualToResult () ())
+! (bind! &data (make-df (collapse (match &self (House $id $expr) ($id $expr)))))
+
+! (bind! &model (kmeans (DataFrame.values &data) 3))
+! (bind! &labels (kmeans.predict (DataFrame.values &data) &model))
+
+! (cons-labels (DataFrame.values (DataFrame.index &data)) &labels ClusterLabelHouse)
 
 
 
-! (bind! &res (match &self (ClusterLabel $id $label) $id))
-! (assertEqual (get-type &res) Number)
+; ! (bind! &res (match &self (ClusterLabelHouse $id $label) $id))
+; ! (assertEqual (get-type &res) Number)
 
+; !(match &self (,(House $id $expr) (ClusterLabelHouse $id 0)) (assertEqual (get-type (kv-values $expr)) ((Number Number))))
+
+; !(println!  "Done")

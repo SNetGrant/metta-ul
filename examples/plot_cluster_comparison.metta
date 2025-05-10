@@ -1,13 +1,14 @@
 ! (import! &self metta_ul)
 ! (import! &self metta_ul:cluster:kmeans)
 ! (import! &self metta_ul:cluster:gmm)
-;! (import! &self metta_ul:cluster:agglomerative)
-; ! (import! &self metta_ul:cluster:spectral_clustering)
-; ! (import! &self metta_ul:cluster:bisecting_kmeans)
+! (import! &self metta_ul:cluster:agglomerative)
+! (import! &self metta_ul:cluster:spectral_clustering)
+! (import! &self metta_ul:cluster:bisecting_kmeans)
 ! (ul-import sklearn.datasets as dts)
 ! (ul-from sklearn.preprocessing import StandardScaler)
 ! (ul-import matplotlib.pyplot as plt)
-! (ul-from numpy import ndarray)
+! (ul-import sklearn.metrics as metrics)
+! (ul-from numpy.random import RandomState)
 
 
 ;time functions
@@ -18,12 +19,12 @@
 (= (time.fmt $t) ((py-dot $t strftime) "%Y/%m/%d %H:%M:%S" ))
 (= (timedelta.fmt $td) ((py-dot $td total_seconds)))
 
-(= (timeit $f $dn $ds) (
+(= (timeit (quote $f)) (
   let* (
     ($t1 (perf_counter))
-    ($res ($f $dn $ds))
+    ($res $f)
     ($t2 (perf_counter))
-    ($t (time.sub $t1 $t2))
+    ($t (time.sub $t2 $t1))
   )
   ($res $t)
 ))
@@ -80,7 +81,14 @@
     ) $c2)
 )
 
-
+(= (make-aniso) 
+  (let* (
+    (($X $Y) (dts.make_blobs (n_samples (get-cons n_samples)) (random_state (get-cons random_state))))
+    ($transformation (np.array ((0.6 -0.6) (-0.4 0.8))))
+    ($X-aniso (np.dot $X $transformation))
+  )
+  ($X-aniso $Y))
+)
 
 (Cons seed 30)
 (Cons random_state 170)
@@ -88,7 +96,7 @@
 (Param default (Cons n_clusters 3))
 
 (ToyData noisy_circles
- (dts.make_circles (n_samples (get-cons n_samples)) (factor 0.5) (noise 0.05) (random_state (get-cons seed))))
+  (dts.make_circles (n_samples (get-cons n_samples)) (factor 0.5) (noise 0.05) (random_state (get-cons seed))))
 (Param noisy_circles (Cons n_clusters 2)) 
 
 (ToyData noisy_moon (dts.make_moons (n_samples (get-cons n_samples)) (noise 0.05) (random_state (get-cons seed))))
@@ -98,52 +106,78 @@
 
 (ToyData varied (dts.make_blobs (n_samples (get-cons n_samples)) (cluster_std (py-list (1.0 2.5 0.5))) (random_state (get-cons random_state))))
 
-(= (normalize ($x $y)) (StandardScaler.fit_transform (StandardScaler) $x))
+(ToyData aniso (make-aniso))
+
+(ToyData no-structure ((RandomState.rand (RandomState (get-cons random_state)) (get-cons n_samples) 2) ()))
+(= (normalize $x) (StandardScaler.fit_transform (StandardScaler) $x))
+
+(= (cal-intrinsic-metrics $data $labels)
+  (let* (
+    ($sil (metrics.silhouette_score $data $labels))
+    ($chi (metrics.calinski_harabasz_score $data $labels))
+    ($dbi (metrics.davies_bouldin_score $data $labels))
+  )
+  ($sil $chi $dbi)
+  )
+)
+
+(= (cal-extrinsic-metrics $ty $labels)
+  (if (== $ty ()) (0 0 0)
+    (let* 
+    (
+      ($ari (metrics.adjusted_rand_score $ty $labels))
+      ($nmi (metrics.normalized_mutual_info_score $ty $labels))
+      ($ami (metrics.adjusted_mutual_info_score $ty $labels))
+    )
+    ($ari $nmi $ami)
+    )
+  )
+)
 
 (= (fit-predict $dn $ds)  
   (let* (
     (() (println! ("start kmeans on " $dn "data type" (get-type $ds))))
-    ((KmeansModel $a $b $labels) (kmeans.fit $ds (get-param $dn n_clusters)))
-    (() (println! ("keams done on " $dn)))
-  ) ($labels "Kmeans"))
+    (($model $t1) (timeit (quote (kmeans $ds (get-param $dn n_clusters) 100))))
+    (($labels $t2) (timeit (quote (kmeans.predict $ds $model))))
+    (() (println! ("kmeans done on " $dn take (+ $t1 $t2))))
+  ) ($labels "Kmeans" (+ $t1 $t2)))
 )
 
 
 (= (fit-predict $dn $ds) 
   (let* (
     (() (println! ("start GMM on " $dn "data type" (get-type $ds))))
-    ($model (gmm $ds (get-param $dn n_clusters)))
-    ($labels (gmm.predict $ds $model))
-    (() (println! ("GMM done on " $dn)))
-  ) ($labels "GMM"))
+    (($model $t1) (timeit (quote (gmm $ds (get-param $dn n_clusters)))))
+    (($labels $t2) (timeit (quote (gmm.predict $ds $model))))
+    (() (println! ("GMM done on " $dn take (+ $t1 $t2))))
+  ) ($labels "GMM" (+ $t1 $t2)))
+)
+
+(= (fit-predict $dn $ds) 
+  (let* (
+    (() (println! ("start bisecting on " $dn "data type" (get-type $ds) (get-param $dn n_clusters))))
+    (($model $t1) (timeit (quote (bisecting-kmeans.fit $ds (get-param $dn n_clusters) 10))))
+    (($labels $t2) (timeit (quote (bisecting-kmeans.predict $ds $model))))
+    (() (println! ("bisecting done on " $dn take (+ $t1 $t2))))
+  ) ($labels "bisecting" (+ $t1 $t2)))
+)
+
+(= (fit-predict $dn $ds) 
+  (let* (
+    (() (println! ("start spectral-clustering on " $dn "data type" (get-type $ds))))
+    (($model $t1) (timeit (quote (spectral-clustering.fit $ds (get-param $dn n_clusters)))))
+    (() (println! ("fitted" $dn)))
+    (($labels $t2) (timeit (quote (spectral-clustering.predict $model (get-param $dn n_clusters)))))
+    (() (println! ("spectral-clustering done on " $dn take (+ $t1 $t2))))
+  ) ($labels "SpectralClustering" (+ $t1 $t2)))
 )
 
 ; (= (fit-predict $dn $ds) 
 ;   (let* (
-;     (() (println! ("start bisecting on " $dn "data type" (get-type $ds) (get-param $dn n_clusters))))
-;     ($model (bisecting-kmeans.fit $ds (get-param $dn n_clusters) 10))
-;     (() (println! ("bisecting fit on " $model)))
-;     ($labels (bisecting-kmeans.predict $ds $model))
-;     (() (println! ("bisecting done on " $labels)))
-;   ) ($labels "bisecting"))
-; )
-
-; (= (fit-predict $dn $ds) 
-;   (let* (
-;     (() (println! ("start spectral-clustering on " $dn "data type" (get-type $ds))))
-;     ($model (spectral-clustering.fit $ds (get-param $dn n_clusters)))
-;     (() (println! ("fitted" $dn)))
-;     ($labels (spectral-clustering.predict $model (get-param $dn n_clusters)))
-;     (() (println! ("spectral-clustering done on " $dn)))
-;   ) ($labels "SpectralClustering"))
-; )
-
-; (= (fit-predict $dn $ds) 
-;   (let* (
 ;     (() (println! ("start Agglomerative on " $dn "data type" (get-type $ds) "n_cluster" (get-param $dn n_clusters))))
-;     ($labels (ndarray.astype (agglomerative.fit-predict $ds (get-param $dn n_clusters) "single") int))
+;     (($labels $t) (timeit (quote (agglomerative.fit-predict $ds (get-param $dn n_clusters) "single"))))
 ;     (() (println! ("Agglomerative done on " $dn $labels)))
-;   ) ($labels "NEW"))
+;   ) ($labels "Agglomerative" $t))
 ; )
 
 
@@ -180,12 +214,14 @@
 !(collapse(let* (
   ($plt-idx  (new-state 1))
   (() (println! ("datasets count:" &tdc "alg count" &agn)))
-  (($dn $ds) (match &self (ToyData $name $dataset) ($name $dataset)))
-  (() (println! ($dn "matched")))
-  ($norm (normalize $ds))
-  (() (println! ($dn "normalized")))
-  ((($labels $algn) $dur) (timeit fit-predict $dn $norm))
-  (() (println! ("fit predict" $algn "on" $dn "take" $dur)))
+  (($dn ($X $ty)) (match &self (ToyData $name $dataset) ($name $dataset)))
+  ($norm (normalize $X))
+  (($labels $algn $dur) (fit-predict $dn $norm))
+  (($sil $chi $dbi) (cal-intrinsic-metrics $norm $labels))
+  (($ari $nmi $ami) (cal-extrinsic-metrics $ty $labels))
+  (() (println! ("fit predict" $algn "on" $dn "take" $dur )))
+  (() (println! (Intrinsic Metrics ":"  Silhouette $sil Calinski-Harabasz $chi Davies-Bouldin $dbi)))
+  (() (println! (Extrinsic Metrics ":"  Adjusted Rand Index $ari Normalized Mutual Information $nmi Adjusted Mutual Information $ami)))
   (() (plot-it $norm $labels $algn $plt-idx))
 ) ()))
 !(plt.savefig "out.png")

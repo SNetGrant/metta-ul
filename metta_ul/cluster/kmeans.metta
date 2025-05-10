@@ -66,13 +66,14 @@
 )
 
 (=
-  (kmeans.fit $X $k)
-  (let* (($centers (kmeans $X $k)) ($lables (np.argmax (kmeans.assign $X $centers $k) 0))) (KmeansModel $X $centers $lables))
+    (kmeans.fit $X $k $max-iter) 
+    (kmeans $X $k $max-iter)
 )
 
 (=
-  (labels (KmeansModel $A $B $C))
-  $C
+  (kmeans.predict $X $centers)
+    (np.argmax (kmeans.assign $X $centers) 0)
 )
+
 
 
