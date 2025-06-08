@@ -218,6 +218,7 @@ def numme_atoms():
     nmRepeat = G(PatternOperation("np.repeat", wrapnpop(np.repeat), unwrap=False))
     nmEye = G(PatternOperation("np.eye", wrapnpop(np.eye), unwrap=False))
     nmOnes = G(PatternOperation("np.ones", wrapnpop(np.ones), unwrap=False))
+    nmZeros = G(PatternOperation("np.zeros", wrapnpop(np.zeros), unwrap=False))
     nmPower = G(PatternOperation("np.power", wrapnpop(np.power), unwrap=False))
     nmRandomRand = G(
         PatternOperation("np.random.rand", wrapnpop(np.random.rand), unwrap=False)
@@ -230,6 +231,7 @@ def numme_atoms():
 
     nmSlice = G(PatternOperation("np.slice", wrapnpop(_slice), unwrap=False))
     nmArgmax = G(PatternOperation("np.argmax", wrapnpop(np.argmax), unwrap=False))
+    nmMaximum = G(PatternOperation("np.maximum", wrapnpop(np.maximum), unwrap=False))
     nmIx_ = G(PatternOperation("np.ix_", wrapnpop(np.ix_), unwrap=False, rec=False))
     nmMin = G(PatternOperation("np.min", wrapnpop(np.min), unwrap=False))
     nmMax = G(PatternOperation("np.max", wrapnpop(np.max), unwrap=False))
@@ -244,6 +246,7 @@ def numme_atoms():
         )
     )
     nmWhere = G(PatternOperation("np.where", wrapnpop(np.where), unwrap=False))
+    nmIsin = G(PatternOperation("np.isin", wrapnpop(np.isin), unwrap=False))
     nmEqual = G(PatternOperation("np.equal", wrapnpop(np.equal), unwrap=False))
     nmAppend = G(PatternOperation("np.append", wrapnpop(np.append)))
     nmPut = G(PatternOperation("np.put", wrapnpop(np.put), unwrap=False))
@@ -259,6 +262,7 @@ def numme_atoms():
         PatternOperation("py.assertIsNone", _assert_isNone, unwrap=False)
     )
     nmSort = G(PatternOperation("np.sort", wrapnpop(np.sort), unwrap=False))
+    nmReshape = G(PatternOperation("np.reshape", wrapnpop(np.reshape), unwrap=False))
 
     pyNone = ValueAtom(None)
     pyTrue = ValueAtom(True)
@@ -325,4 +329,8 @@ def numme_atoms():
         "np.True_": nmTrue,
         "py.assertIsNone": nmAssertIsNone,
         "np.sort": nmSort,
+        "np.reshape": nmReshape,
+        "np.zeros": nmZeros,
+        "np.isin": nmIsin,
+        "np.maximum": nmMaximum
     }

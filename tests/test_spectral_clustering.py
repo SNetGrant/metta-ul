@@ -470,20 +470,14 @@ def test_spectral_clustering_cluster(metta: MeTTa):
             (spectral-clustering.spectral-embeddings
                 (spectral-clustering.eigh
                     (spectral-clustering.normalized-laplacian
-                        (spectral-clustering.rbf-affinity-matrix
-                            (spectral-clustering.square-distance-matrix
-                                (spectral-clustering.square-norm (X1))
-                                (X1)
-                            )
+                        (spectral-clustering.compute-rbf-affinity-matrix 
+                            (X1)
                             0.1
                         )
                         (spectral-clustering.inverse-degree-matrix
                             (spectral-clustering.degree
-                                (spectral-clustering.rbf-affinity-matrix
-                                    (spectral-clustering.square-distance-matrix
-                                        (spectral-clustering.square-norm (X1))
-                                        (X1)
-                                    )
+                                (spectral-clustering.compute-rbf-affinity-matrix 
+                                    (X1)
                                     0.1
                                 )
                             )
@@ -498,7 +492,7 @@ def test_spectral_clustering_cluster(metta: MeTTa):
             (np.transpose
                 (kmeans.assign
                     (embeddings1)
-                    (spectral-clustering.cluster (embeddings1) (K1) 0.1 100)
+                    (spectral-clustering.cluster (embeddings1) (K1) 100)
                 )
             )
             1
@@ -527,20 +521,14 @@ def test_spectral_clustering_cluster(metta: MeTTa):
             (spectral-clustering.spectral-embeddings
                 (spectral-clustering.eigh
                     (spectral-clustering.normalized-laplacian
-                        (spectral-clustering.rbf-affinity-matrix
-                            (spectral-clustering.square-distance-matrix
-                                (spectral-clustering.square-norm (X2))
-                                (X2)
-                            )
+                        (spectral-clustering.compute-rbf-affinity-matrix 
+                            (X2)
                             0.1
                         )
                         (spectral-clustering.inverse-degree-matrix
                             (spectral-clustering.degree
-                                (spectral-clustering.rbf-affinity-matrix
-                                    (spectral-clustering.square-distance-matrix
-                                        (spectral-clustering.square-norm (X2))
-                                        (X2)
-                                    )
+                                (spectral-clustering.compute-rbf-affinity-matrix 
+                                    (X2)
                                     0.1
                                 )
                             )
@@ -555,7 +543,7 @@ def test_spectral_clustering_cluster(metta: MeTTa):
                 (np.transpose
                     (kmeans.assign 
                         (embeddings2) 
-                        (spectral-clustering.cluster (embeddings2) (K2) 0.1 100) 
+                        (spectral-clustering.cluster (embeddings2) (K2) 100) 
                     )
                 )
                 1            
@@ -574,6 +562,7 @@ def test_spectral_clustering_fit_and_predict(metta: MeTTa):
         ! (import! &self metta_ul:cluster:spectral_clustering)
         """
     )
+
     result: Atom = metta.run(
         """
         (= 
@@ -585,7 +574,7 @@ def test_spectral_clustering_fit_and_predict(metta: MeTTa):
             (fit-outputs)
             (spectral-clustering.fit (X) 2)
         )
-
+        
         ! (spectral-clustering.predict (fit-outputs) 2)
         """
     )[0][0]
@@ -611,6 +600,49 @@ def test_spectral_clustering_fit_and_predict(metta: MeTTa):
         unique_values, expected_values
     ), "The unique values in the array are not [0, 1]!"
 
+def test_spectral_clustering_fit_and_predict_knn_graph_mode(metta: MeTTa):
+    metta.run(
+        """
+        ! (import! &self metta_ul:cluster:spectral_clustering)
+        """
+    )
+    result: Atom = metta.run(
+        """
+        (= 
+            (X)
+            (np.array ((0.0 0.0) (0.1 0) (1.0 1.0) (1.1 1.0)))
+        )
+                        
+        (: fit-outputs (-> ((NPArray (4 2)) (NPArray (2 2)))))
+        (=
+            (fit-outputs)
+            (spectral-clustering.fit (X) 2 "binary-knn-graph" 1 10)
+        )
+        ;! (fit-outputs)
+        ! (spectral-clustering.predict (fit-outputs) 2)
+        ;! (np.add 0.0000001 (spectral-clustering.compute-knn-binary-graph-affinity-matrix (X) 1))
+        """
+    )[0][0]
+
+    cluster_labels = result.get_object().value
+    assert (
+            cluster_labels[0] == cluster_labels[1]
+    ), f"The first two elements are not the same! {cluster_labels}"
+    assert (
+            cluster_labels[-2] == cluster_labels[-1]
+    ), f"The last two elements are not the same! {cluster_labels}"
+
+    assert (
+            cluster_labels[0] != cluster_labels[-2]
+    ), f"The first two and last two elements should be distinct! {cluster_labels}"
+
+    unique_values = np.unique(cluster_labels)
+    expected_values = np.array([0, 1])
+
+    assert np.array_equal(
+        unique_values, expected_values
+    ), f"The unique values in the array are not [0, 1]! {cluster_labels}"
+    pass
 
 # def test_real_data(metta: MeTTa):
 #     metta.run(

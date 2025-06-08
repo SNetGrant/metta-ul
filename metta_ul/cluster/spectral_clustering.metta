@@ -67,6 +67,68 @@
     )
 )
 
+(: spectral-clustering.compute-rbf-affinity-matrix (-> (NPArray ($N $D)) Number (NPArray ($N $N))))
+(=
+    (spectral-clustering.compute-rbf-affinity-matrix $X $rbf-kernel-sigma)
+    (spectral-clustering.rbf-affinity-matrix
+        (spectral-clustering.square-distance-matrix
+            (spectral-clustering.square-norm $X)
+            $X
+        )
+        $rbf-kernel-sigma
+    )
+)
+; =================== KNN mode ===================
+(: spectral-clustering.compute-knn-binary-graph-affinity-matrix (-> (NPArray ($N $D)) Number (NPArray ($N $N))))
+(=
+    (spectral-clustering.compute-knn-binary-graph-affinity-matrix $X $n-neighbors)
+    (let
+        $dist
+        (spectral-clustering.square-distance-matrix
+            (spectral-clustering.square-norm $X)
+        $X
+        )
+        (let
+            $N
+            (np.shape $dist 0)
+            (let
+                $end-index
+                (+ 1 $n-neighbors)
+                (let
+                    $knn-indices
+                    (np.take (np.argsort $dist 1) (np.arange 1 $end-index) 1)
+                    (let
+                        $row-index
+                        (np.reshape (np.arange $N) (np.array ($N 1)))
+                        (let
+                            $flat-index
+                            (np.reshape
+                                (np.add (np.mul $row-index $N) $knn-indices)
+                                -1
+                            )
+                            (let
+                                $mask
+                                (np.isin (np.arange (* $N $N)) $flat-index)
+                                (let
+                                    $A-flat
+                                    (np.where $mask 1.0 0.0)
+                                    (let
+                                        $A
+                                        (np.reshape $A-flat (np.array ($N $N)))
+                                        (np.add 0.00000001 (np.maximum $A (np.transpose $A)))
+                                    )
+
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+)
+
+; ================================================
 ; Python code: d = np.sum(W, axis=1)
 ; Compute the degree for each node by summing its affinities to all other nodes.
 (: spectral-clustering.degree (-> (NPArray ($N $N)) (NPArray ($N 1))))
@@ -171,9 +233,9 @@
 
 ; Python code: kmeans(X=U_norm, k=k, max_iter=max_iter)
 ; Apply k-means to the normalized spectral embedding to partition data into k clusters.
-(: spectral-clustering.cluster (-> (NPArray ($N $D)) Number Number Number (NPArray ($K $D))))
+(: spectral-clustering.cluster (-> (NPArray ($N $D)) Number Number (NPArray ($K $D))))
 (=
-    (spectral-clustering.cluster $X $num-clusters $rbf-kernel-sigma $max-kmeans-iter)
+    (spectral-clustering.cluster $X $num-clusters $max-kmeans-iter)
     (kmeans.fit
         $X
         $num-clusters
@@ -183,17 +245,17 @@
 )
 
 ; Fit spectral clustering algorithm and return spectral embedding and cluster centroids.
-(: spectral-clustering.fit (-> (NPArray ($N $D)) Number Number Number ((NPArray ($N $C)) (NPArray ($K $C)))))
+(: spectral-clustering.fit (-> (NPArray ($N $D)) Number String Number Number ((NPArray ($N $C)) (NPArray ($K $C)))))
 (=
-    (spectral-clustering.fit $X $num-clusters $rbf-kernel-sigma $max-kmeans-iter)
+    (spectral-clustering.fit $X $num-clusters $affinity-mode $affinity-param $max-kmeans-iter)
     (let
         $affinity-matrix
-        (spectral-clustering.rbf-affinity-matrix
-            (spectral-clustering.square-distance-matrix
-                (spectral-clustering.square-norm $X)
-                $X
+        (case
+            $affinity-mode
+            (
+                ("binary-knn-graph" (spectral-clustering.compute-knn-binary-graph-affinity-matrix $X $affinity-param))
+                ("rbf-affinity-matrix" (spectral-clustering.compute-rbf-affinity-matrix $X $affinity-param))
             )
-            $rbf-kernel-sigma
         )
         (let
             $embeddings
@@ -212,7 +274,7 @@
                     $num-clusters
                 )
             )
-            ($embeddings (spectral-clustering.cluster $embeddings $num-clusters $rbf-kernel-sigma $max-kmeans-iter))
+            ($embeddings (spectral-clustering.cluster $embeddings $num-clusters $max-kmeans-iter))
         )
     )
 )
@@ -221,7 +283,7 @@
 (: spectral-clustering.fit (-> (NPArray ($N $D)) Number ((NPArray ($N $C)) (NPArray ($K $C)))))
 (=
     (spectral-clustering.fit $X $num-clusters)
-    (spectral-clustering.fit $X $num-clusters 0.1 10)
+    (spectral-clustering.fit $X $num-clusters "rbf-affinity-matrix" 0.1 10)
 )
 
 ; Predict the cluster assignments of data given spectral embeddings, centroids and number of clusters.

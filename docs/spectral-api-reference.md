@@ -1,7 +1,8 @@
+
 # metta_ul:cluster:spectral-clustering
 
 ## Overview
-This module implements the Spectral Clustering algorithm. It uses the RBF (Radial Basis Function) kernel to construct an affinity matrix, computes the normalized graph Laplacian, and performs eigen-decomposition to extract spectral embeddings. These embeddings are then normalized and clustered using k-means. The algorithm is designed to cluster data that may not be linearly separable, leveraging the eigenstructure of the Laplacian.
+This module implements the Spectral Clustering algorithm. It supports two methods for constructing the affinity matrix: RBF (Radial Basis Function) kernel and KNN binary graph. The algorithm computes the normalized graph Laplacian, performs eigen-decomposition to extract spectral embeddings, normalizes these embeddings, and clusters them using k-means. The algorithm is designed to cluster data that may not be linearly separable, leveraging the eigenstructure of the Laplacian.
 
 ## Function Definitions
 
@@ -45,6 +46,34 @@ Generates the RBF (Radial Basis Function) affinity matrix from a squared distanc
   - Type: `(NPArray ($N $N))`
 ---
 
+### `spectral-clustering.compute-rbf-affinity-matrix`
+Computes the complete RBF affinity matrix from the input dataset by combining square norm computation, distance matrix calculation, and RBF kernel application.
+
+#### Parameters:
+- `$X`: The dataset.
+  - Type: `(NPArray ($N $D))`
+- `$rbf-kernel-sigma`: The sigma parameter for the RBF kernel.
+  - Type: `Number`
+
+#### Returns:
+- A symmetric RBF affinity matrix.
+  - Type: `(NPArray ($N $N))`
+---
+
+### `spectral-clustering.compute-knn-binary-graph-affinity-matrix`
+Computes a binary affinity matrix based on k-nearest neighbors (KNN). Each data point is connected to its k nearest neighbors with weight 1, and all other connections have weight 0.
+
+#### Parameters:
+- `$X`: The dataset.
+  - Type: `(NPArray ($N $D))`
+- `$n-neighbors`: The number of nearest neighbors to connect to each data point.
+  - Type: `Number`
+
+#### Returns:
+- A binary affinity matrix where 1 indicates a connection between k-nearest neighbors and 0 otherwise.
+  - Type: `(NPArray ($N $N))`
+---
+
 ### `spectral-clustering.degree`
 Computes the degree of each node (data point) based on the affinity matrix.
 
@@ -71,7 +100,7 @@ Constructs the inverse degree matrix used for normalization.
 Computes the normalized graph Laplacian from the affinity matrix and its inverse degree matrix.
 
 #### Parameters:
-- `$W`: The RBF affinity matrix.
+- `$W`: The affinity matrix.
   - Type: `(NPArray ($N $N))`
 - `$inverse-degree-matrix-W`: The inverse degree matrix computed from `$W`.
   - Type: `(NPArray ($N $N))`
@@ -158,11 +187,9 @@ Normalizes each row of a matrix to have unit norm.
 Clusters the spectral embeddings using the k-means algorithm.
 
 #### Parameters:
-- `$X`: The original dataset.
+- `$X`: The spectral embeddings matrix.
   - Type: `(NPArray ($N $D))`
 - `$num-clusters`: The desired number of clusters.
-  - Type: `Number`
-- `$rbf-kernel-sigma`: The sigma parameter for constructing the RBF affinity matrix.
   - Type: `Number`
 - `$max-kmeans-iter`: The maximum number of iterations for the k-means algorithm.
   - Type: `Number`
@@ -172,22 +199,44 @@ Clusters the spectral embeddings using the k-means algorithm.
   - Type: `(NPArray ($K $D))`
 ---
 
-### `spectral-clustering.fit`
-Performs the full spectral clustering process on the dataset.
+### `spectral-clustering.fit` (Full Version)
+Performs the complete spectral clustering process on the dataset with configurable affinity computation method.
 
 #### Parameters:
 - `$X`: The dataset, represented as an array of data points.
   - Type: `(NPArray ($N $D))`
 - `$num-clusters`: The desired number of clusters.
   - Type: `Number`
-- `$rbf-kernel-sigma`: The sigma parameter for the RBF kernel (default example: `0.1`).
+- `$affinity-mode`: The method for computing the affinity matrix. Supported values:
+  - `"rbf-affinity-matrix"`: Uses RBF kernel for similarity computation
+  - `"binary-knn-graph"`: Uses k-nearest neighbors binary graph
+  - Type: `String`
+- `$affinity-param`: Parameter for the chosen affinity method:
+  - For RBF: the sigma parameter for the kernel
+  - For KNN: the number of nearest neighbors
   - Type: `Number`
-- `$max-kmeans-iter`: The maximum number of iterations for the k-means algorithm (default example: `100`).
+- `$max-kmeans-iter`: The maximum number of iterations for the k-means algorithm.
   - Type: `Number`
 
 #### Returns:
-- The tuple containing spectral embeddings and the final centroids computed from clustering the spectral embeddings.
+- A tuple containing spectral embeddings and the final centroids computed from clustering the spectral embeddings.
   - Type: `((NPArray ($N $C)) (NPArray ($K $C)))`
+
+---
+
+### `spectral-clustering.fit` (Simplified Version)
+Performs spectral clustering with default parameters (RBF affinity with sigma=0.1 and 10 k-means iterations).
+
+#### Parameters:
+- `$X`: The dataset, represented as an array of data points.
+  - Type: `(NPArray ($N $D))`
+- `$num-clusters`: The desired number of clusters.
+  - Type: `Number`
+
+#### Returns:
+- A tuple containing spectral embeddings and the final centroids computed from clustering the spectral embeddings.
+  - Type: `((NPArray ($N $C)) (NPArray ($K $C)))`
+
 ---
 
 ### `spectral-clustering.predict`
@@ -204,16 +253,28 @@ Predicts the cluster assignment for each data point in the dataset using the spe
 #### Returns:
 - A vector of cluster labels, one for each data point, determined by assigning each point to the nearest centroid.
   - Type: `((NPArray ($N)))`
+
 ## Usage
-To perform spectral clustering on a dataset `S` (an `NPArray` of shape `(n, d)`) with a specified number of clusters (e.g., 3), RBF kernel sigma (e.g., `0.1`), and a maximum of 100 iterations for k-means, you can use:
+
+### Using RBF Affinity Matrix
+To perform spectral clustering on a dataset `S` with RBF kernel:
 ```metta
 (=
     (embeddings-and-centroids)
-    (spectral-clustering.fit (S) 3 0.1 100)
+    (spectral-clustering.fit S 3 "rbf-affinity-matrix" 0.1 100)
 )
 ```
-To predict the cluster labels for the dataset `S`, use:
+### Using KNN Binary Graph
+To perform spectral clustering on a dataset `S` with KNN binary graph (connecting each point to its 5 nearest neighbors):
 ```metta
+(=
+    (embeddings-and-centroids)
+    (spectral-clustering.fit S 3 "binary-knn-graph" 5 100)
+)
+```
+### Using Default Parameters
+To predict the cluster labels for the dataset `S`:
+``` metta
 (=
     (cluster-labels)
     (spectral-clustering.predict
